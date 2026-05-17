@@ -1,0 +1,299 @@
+#include <iostream>
+#include <vector>
+#include <chrono>
+#include <cmath>
+#include <omp.h>
+
+
+// 1 задача
+#define N 1000000
+
+int main() {
+    setlocale(LC_ALL, "RUS");
+    double* a, * b;
+    double dot_product = 0.0;
+    double start_time, end_time;
+    int num_threads;
+
+    // Выделение памяти
+    a = (double*)malloc(N * sizeof(double));
+    b = (double*)malloc(N * sizeof(double));
+
+    // Инициализация векторов
+    for (int i = 0; i < N; i++) {
+        a[i] = 1.0;
+        b[i] = 2.0;
+    }
+
+    start_time = omp_get_wtime();
+
+    // Получаем количество потоков
+#pragma omp parallel
+    {
+#pragma omp single
+        num_threads = omp_get_num_threads();
+    }
+
+    // Массив для частичных сумм каждого потока
+    double* partial_sums = (double*)calloc(num_threads, sizeof(double));
+
+#pragma omp parallel
+    {
+        int thread_id = omp_get_thread_num();
+
+#pragma omp for
+        for (int i = 0; i < N; i++) {
+            partial_sums[thread_id] += a[i] * b[i];
+        }
+    }
+
+    // Суммирование результатов всех потоков
+    for (int i = 0; i < num_threads; i++) {
+        dot_product += partial_sums[i];
+    }
+
+    end_time = omp_get_wtime();
+
+    printf("Скалярное произведение: %f\n", dot_product);
+    printf("Время выполнения: %f секунд\n", end_time - start_time);
+    printf("Количество потоков: %d\n", num_threads);
+
+    // Очистка памяти
+    free(a);
+    free(b);
+    free(partial_sums);
+
+    return 0;
+}
+
+//2 задача
+
+//int main() {
+//    setlocale(LC_ALL, "RUS");
+//    // Размеры: матрица A размером M x N, вектор x размером N
+//    const int M = 10000;  // количество строк
+//    const int N = 5000;   // количество столбцов
+//
+//    // Создаем матрицу и векторы
+//    std::vector<std::vector<double>> A(M, std::vector<double>(N));
+//    std::vector<double> x(N);
+//    std::vector<double> y(M, 0.0);  // результирующий вектор
+//
+//    // Инициализация данных
+//    for (int i = 0; i < M; i++) {
+//        for (int j = 0; j < N; j++) {
+//            A[i][j] = i + j * 0.1;
+//        }
+//    }
+//
+//    for (int j = 0; j < N; j++) {
+//        x[j] = j * 0.5;
+//    }
+//
+//    // Вычисление: y = A * x (параллельно по строкам)
+//    auto start = std::chrono::high_resolution_clock::now();
+//
+//#pragma omp parallel for
+//    for (int i = 0; i < M; i++) {
+//        double sum = 0.0;
+//        for (int j = 0; j < N; j++) {
+//            sum += A[i][j] * x[j];
+//        }
+//        y[i] = sum;
+//    }
+//
+//    auto end = std::chrono::high_resolution_clock::now();
+//    auto time = std::chrono::duration<double>(end - start).count();
+//
+//    // Вывод результатов
+//    std::cout << "Размер матрицы: " << M << " x " << N << std::endl;
+//    std::cout << "Использовано потоков: " << omp_get_max_threads() << std::endl;
+//    std::cout << "Время выполнения: " << time << " секунд" << std::endl;
+//
+//    // Вывод первых 5 элементов результата
+//    std::cout << "Первые 5 элементов вектора y:" << std::endl;
+//    for (int i = 0; i < 5 && i < M; i++) {
+//        std::cout << "y[" << i << "] = " << y[i] << std::endl;
+//    }
+//
+//    return 0;
+//}
+
+//3 задача
+
+//int main() {
+//    setlocale(LC_ALL, "RUS");
+//    // Размеры: матрица A размером M x N, вектор x размером N
+//    const int M = 10000;  // количество строк
+//    const int N = 5000;   // количество столбцов
+//
+//    // Создаем матрицу и векторы
+//    std::vector<std::vector<double>> A(M, std::vector<double>(N));
+//    std::vector<double> x(N);
+//    std::vector<double> y(M, 0.0);  // результирующий вектор
+//
+//    // Инициализация данных
+//    for (int i = 0; i < M; i++) {
+//        for (int j = 0; j < N; j++) {
+//            A[i][j] = i + j * 0.1;
+//        }
+//    }
+//
+//    for (int j = 0; j < N; j++) {
+//        x[j] = j * 0.5;
+//    }
+//
+//    std::cout << "Размер матрицы: " << M << " x " << N << std::endl;
+//    std::cout << "Использовано потоков: " << omp_get_max_threads() << std::endl;
+//
+//    // Вычисление: y = A * x с разделением по столбцам
+//    auto start = std::chrono::high_resolution_clock::now();
+//
+//    // Инициализируем результирующий вектор нулями
+//    for (int i = 0; i < M; i++) {
+//        y[i] = 0.0;
+//    }
+//
+//    // Распараллеливаем по столбцам: каждый поток обрабатывает свой набор столбцов
+//#pragma omp parallel
+//    {
+//        // Создаем локальный массив для частичных сумм каждого потока
+//        std::vector<double> local_y(M, 0.0);
+//
+//        // Распределяем столбцы между потоками
+//#pragma omp for
+//        for (int j = 0; j < N; j++) {
+//            double x_j = x[j];
+//            for (int i = 0; i < M; i++) {
+//                local_y[i] += A[i][j] * x_j;
+//            }
+//        }
+//
+//        // Складываем локальные результаты в глобальный вектор
+//#pragma omp critical
+//        {
+//            for (int i = 0; i < M; i++) {
+//                y[i] += local_y[i];
+//            }
+//        }
+//    }
+//
+//    auto end = std::chrono::high_resolution_clock::now();
+//    auto time = std::chrono::duration<double>(end - start).count();
+//
+//    std::cout << "Время выполнения: " << time << " секунд" << std::endl;
+//
+//    // Вывод первых 5 элементов результата
+//    std::cout << "Первые 5 элементов вектора y:" << std::endl;
+//    for (int i = 0; i < 5 && i < M; i++) {
+//        std::cout << "y[" << i << "] = " << y[i] << std::endl;
+//    }
+//
+//    return 0;
+//}
+
+
+//4 задача
+
+//int main() {
+//    setlocale(LC_ALL, "RUS");
+//    // Размеры матрицы
+//    const int M = 10000;  // строки
+//    const int N = 5000;   // столбцы
+//    const int BLOCK_SIZE = 100;  // размер блока по строкам
+//
+//    // Создаем матрицу и векторы
+//    std::vector<std::vector<double>> A(M, std::vector<double>(N));
+//    std::vector<double> x(N);
+//    std::vector<double> y(M, 0.0);
+//
+//    // Инициализация
+//    for (int i = 0; i < M; i++) {
+//        for (int j = 0; j < N; j++) {
+//            A[i][j] = i + j * 0.1;
+//        }
+//    }
+//
+//    for (int j = 0; j < N; j++) {
+//        x[j] = j * 0.5;
+//    }
+//
+//    std::cout << "Размер матрицы: " << M << " x " << N << std::endl;
+//    std::cout << "Размер блока: " << BLOCK_SIZE << " строк" << std::endl;
+//
+//    // Блочное умножение
+//    auto start = std::chrono::high_resolution_clock::now();
+//
+//#pragma omp parallel for
+//    for (int block = 0; block < M; block += BLOCK_SIZE) {
+//        int block_end = std::min(block + BLOCK_SIZE, M);
+//
+//        // Обрабатываем текущий блок строк
+//        for (int i = block; i < block_end; i++) {
+//            double sum = 0.0;
+//            for (int j = 0; j < N; j++) {
+//                sum += A[i][j] * x[j];
+//            }
+//            y[i] = sum;
+//        }
+//    }
+//
+//    auto end = std::chrono::high_resolution_clock::now();
+//    auto time = std::chrono::duration<double>(end - start).count();
+//
+//    std::cout << "Время выполнения: " << time << " секунд" << std::endl;
+//    std::cout << "Использовано потоков: " << omp_get_max_threads() << std::endl;
+//
+//    // Вывод первых 5 элементов
+//    std::cout << "Первые 5 элементов вектора y:" << std::endl;
+//    for (int i = 0; i < 5; i++) {
+//        std::cout << "y[" << i << "] = " << y[i] << std::endl;
+//    }
+//
+//    return 0;
+//}
+
+// 5 задача
+//double f(double x) {
+//    return x * x + sin(x);  // функция для интегрирования
+//}
+//
+//int main() {
+//    setlocale(LC_ALL, "RUS");
+//    double a = 0.0;      // начало отрезка
+//    double b = 10.0;     // конец отрезка
+//    int n = 100000000;   // количество разбиений
+//
+//    double h = (b - a) / n;
+//    double integral = 0.0;
+//
+//    auto start = std::chrono::high_resolution_clock::now();
+//
+//#pragma omp parallel
+//    {
+//        double local_sum = 0.0;
+//
+//#pragma omp for
+//        for (int i = 1; i < n; i++) {
+//            double x = a + i * h;
+//            local_sum += f(x);
+//        }
+//
+//#pragma omp critical
+//        {
+//            integral += local_sum;
+//        }
+//    }
+//
+//    // Добавляем полусумму концевых точек и умножаем на шаг
+//    integral = (integral + (f(a) + f(b)) / 2.0) * h;
+//
+//    auto end = std::chrono::high_resolution_clock::now();
+//    auto time = std::chrono::duration<double>(end - start).count();
+//
+//    std::cout << "Интеграл = " << integral << std::endl;
+//    std::cout << "Время = " << time << " сек" << std::endl;
+//    std::cout << "Потоков = " << omp_get_max_threads() << std::endl;
+//
+//    return 0;
+//}
